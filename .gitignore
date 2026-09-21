@@ -1,0 +1,33 @@
+# Build directories and outputs
+build/
+bin/
+out/
+*.exe
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exp
+
+# Keep the lightweight bundled GLFW libraries so anyone can build immediately
+!external/glfw/lib-mingw/libglfw3dll.a
+!external/glfw/lib-mingw/glfw3.dll
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# IDE and Editor configurations
+.vscode/
+.vs/
+*.sln
+*.vcxproj*
+.idea/
+*.user
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
