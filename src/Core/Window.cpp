@@ -23,12 +23,18 @@ bool Window::init() {
         return false;
     }
 
+#ifndef __EMSCRIPTEN__
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+#else
+    // WebGL2 context hints
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 #endif
 
     m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), nullptr, nullptr);
@@ -52,6 +58,7 @@ bool Window::init() {
         glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
 
+#ifndef __EMSCRIPTEN__
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "[ERROR] Failed to initialize GLAD!" << std::endl;
         glfwDestroyWindow(m_window);
@@ -59,6 +66,7 @@ bool Window::init() {
         m_window = nullptr;
         return false;
     }
+#endif
 
     glViewport(0, 0, m_width, m_height);
     glfwSwapInterval(1); // Enable V-Sync

@@ -30,6 +30,7 @@ public:
 
     bool init();
     void run();
+    void updateFrame();
 
     // Testing helper to run a single frame and verify
     bool runSelfTest();

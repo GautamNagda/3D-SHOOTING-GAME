@@ -1,6 +1,7 @@
 #include "Game.h"
 #include <iostream>
 #include <string>
+#include <memory>
 
 int main(int argc, char* argv[]) {
     std::cout << "========================================================\n";
@@ -17,6 +18,15 @@ int main(int argc, char* argv[]) {
     }
 
     // Initialize Game Engine (1024 x 768 Resolution)
+#ifdef __EMSCRIPTEN__
+    static std::unique_ptr<CyberStrike::Game> s_game = std::make_unique<CyberStrike::Game>(1024, 768, "CyberStrike 3D");
+    if (!s_game->init()) {
+        std::cerr << "[FATAL] Failed to initialize CyberStrike 3D engine!" << std::endl;
+        return -1;
+    }
+    s_game->run();
+    return 0;
+#else
     CyberStrike::Game game(1024, 768, "CyberStrike 3D - Real-Time 3D Shooting Game");
 
     if (!game.init()) {
@@ -34,4 +44,5 @@ int main(int argc, char* argv[]) {
 
     std::cout << "\n[INFO] CyberStrike 3D terminated cleanly. Good job, Commander!" << std::endl;
     return 0;
+#endif
 }

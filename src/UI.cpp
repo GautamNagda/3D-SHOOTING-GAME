@@ -29,6 +29,32 @@ void UI::destroy() {
 }
 
 void UI::initShaders() {
+#ifdef __EMSCRIPTEN__
+    const char* vertexShaderSource = R"(
+        #version 300 es
+        precision mediump float;
+        layout (location = 0) in vec2 aPos;
+
+        uniform mat4 uOrtho;
+        uniform vec4 uRect; // [X, Y, Width, Height]
+
+        void main() {
+            vec2 pixelPos = uRect.xy + aPos * uRect.zw;
+            gl_Position = uOrtho * vec4(pixelPos, 0.0, 1.0);
+        }
+    )";
+
+    const char* fragmentShaderSource = R"(
+        #version 300 es
+        precision mediump float;
+        out vec4 FragColor;
+        uniform vec4 uColor;
+
+        void main() {
+            FragColor = uColor;
+        }
+    )";
+#else
     const char* vertexShaderSource = R"(
         #version 330 core
         layout (location = 0) in vec2 aPos;
@@ -51,6 +77,7 @@ void UI::initShaders() {
             FragColor = uColor;
         }
     )";
+#endif
 
     GLuint vs = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vs, 1, &vertexShaderSource, nullptr);

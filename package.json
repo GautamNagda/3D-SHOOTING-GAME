@@ -1,0 +1,22 @@
+{
+  "name": "cyberstrike3d-web",
+  "version": "1.0.0",
+  "description": "CyberStrike 3D - Real-Time 3D Shooting Game built with C++, OpenGL, WebGL2, and WebAssembly",
+  "main": "web/index.html",
+  "scripts": {
+    "build:web": "build_web.bat",
+    "serve": "npx serve web",
+    "start": "npx serve web"
+  },
+  "keywords": [
+    "webassembly",
+    "wasm",
+    "webgl2",
+    "opengl",
+    "cpp",
+    "computer-graphics",
+    "fps-game"
+  ],
+  "author": "CyberStrike 3D Dev",
+  "license": "MIT"
+}

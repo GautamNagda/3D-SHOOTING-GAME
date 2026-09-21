@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CyberStrike 3D | WebAssembly & WebGL2 FPS Game</title>
+  <meta name="description" content="Play CyberStrike 3D in your browser! A real-time 3D sci-fi shooter built with C++, WebGL2, and WebAssembly featuring dynamic lighting, AI combat drones, and ray-casting combat." />
+  <meta name="keywords" content="CyberStrike 3D, WebGL2, WebAssembly, C++ Game, OpenGL, 3D FPS, Computer Graphics" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --bg-card: rgba(14, 19, 32, 0.85);
+      --cyan-neon: #00f0ff;
+      --cyan-glow: rgba(0, 240, 255, 0.35);
+      --purple-neon: #b026ff;
+      --red-neon: #ff2a5f;
+      --green-neon: #00ff88;
+      --text-main: #e2e8f0;
+      --text-muted: #8896ab;
+      --border-cyber: rgba(0, 240, 255, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.08) 0%, transparent 60%),
+        radial-gradient(circle at 100% 100%, rgba(176, 38, 255, 0.06) 0%, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+      color: var(--text-main);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      overflow-x: hidden;
+    }
+
+    /* Top Navigation / Branding Header */
+    header {
+      width: 100%;
+      max-width: 1200px;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-cyber);
+      background: rgba(7, 9, 14, 0.7);
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.45rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #fff;
+      text-transform: uppercase;
+      text-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    .brand-title span {
+      color: var(--cyan-neon);
+    }
+
+    .badge-wasm {
+      display: inline-block;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(0, 240, 255, 0.12);
+      border: 1px solid var(--cyan-neon);
+      color: var(--cyan-neon);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-cyber {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 8px 16px;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid var(--border-cyber);
+      color: var(--cyan-neon);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn-cyber:hover {
+      background: var(--cyan-neon);
+      color: #000;
+      box-shadow: 0 0 16px var(--cyan-glow);
+      border-color: var(--cyan-neon);
+    }
+
+    /* Game Viewport Outer Container */
+    .viewport-wrapper {
+      position: relative;
+      margin: 14px auto;
+      width: 100%;
+      max-width: 1024px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .viewport-frame {
+      position: relative;
+      width: 100%;
+      background: #000;
+      border: 1px solid var(--border-cyber);
+      border-radius: 6px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 240, 255, 0.1);
+      overflow: hidden;
+      aspect-ratio: 4 / 3;
+      max-height: 768px;
+    }
+
+    /* Cyber Corner Brackets */
+    .viewport-frame::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 16px;
+      height: 16px;
+      border-top: 3px solid var(--cyan-neon);
+      border-left: 3px solid var(--cyan-neon);
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .viewport-frame::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 16px;
+      height: 16px;
+      border-bottom: 3px solid var(--cyan-neon);
+      border-right: 3px solid var(--cyan-neon);
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* HTML5 Game Canvas */
+    canvas#canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #06090e;
+      cursor: crosshair;
+    }
+
+    /* Loading / Overlay Screen */
+    #loadingOverlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, #0c1220 0%, #06080d 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 20;
+      transition: opacity 0.4s ease;
+    }
+
+    .loader-spinner {
+      width: 64px;
+      height: 64px;
+      position: relative;
+    }
+
+    .loader-spinner::before,
+    .loader-spinner::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      border-top-color: var(--cyan-neon);
+      animation: spin 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+    }
+
+    .loader-spinner::after {
+      border-top-color: transparent;
+      border-bottom-color: var(--purple-neon);
+      animation: spin 0.8s linear infinite reverse;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px var(--cyan-glow);
+    }
+
+    #loadingStatus {
+      font-size: 0.95rem;
+      color: var(--cyan-neon);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      min-height: 24px;
+    }
+
+    .progress-bar-container {
+      width: 280px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 240, 255, 0.2);
+    }
+
+    #progressBar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan-neon), var(--purple-neon));
+      box-shadow: 0 0 10px var(--cyan-neon);
+      transition: width 0.2s ease;
+    }
+
+    /* Start Click Prompt */
+    #clickToPlayOverlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(6, 9, 14, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 15;
+      cursor: pointer;
+    }
+
+    .btn-play-pulse {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.25rem;
+      font-weight: 900;
+      padding: 16px 36px;
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(176, 38, 255, 0.2));
+      border: 2px solid var(--cyan-neon);
+      color: #fff;
+      border-radius: 6px;
+      letter-spacing: 3px;
+      box-shadow: 0 0 25px var(--cyan-glow);
+      animation: pulseBtn 1.8s infinite;
+      cursor: pointer;
+    }
+
+    @keyframes pulseBtn {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 20px var(--cyan-glow); }
+      50% { transform: scale(1.04); box-shadow: 0 0 35px var(--cyan-neon); }
+    }
+
+    .play-hint {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    /* Controls Bar Below Canvas */
+    .controls-panel {
+      width: 100%;
+      max-width: 1024px;
+      margin-top: 10px;
+      padding: 10px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-cyber);
+      border-radius: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .control-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.92rem;
+      color: var(--text-main);
+    }
+
+    .key-badge {
+      display: inline-block;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 7px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      color: var(--cyan-neon);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Information Section / Viva CG Highlights */
+    .info-panel {
+      width: 100%;
+      max-width: 1024px;
+      margin: 12px auto 24px auto;
+      padding: 18px 24px;
+      background: rgba(11, 15, 24, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .info-card {
+      border-left: 2px solid var(--cyan-neon);
+      padding-left: 12px;
+    }
+
+    .info-card h4 {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.85rem;
+      color: var(--cyan-neon);
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+
+    .info-card p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    /* Footer */
+    footer {
+      width: 100%;
+      padding: 14px 24px;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    footer a {
+      color: var(--cyan-neon);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive styling */
+    @media (max-width: 768px) {
+      .brand-title { font-size: 1.1rem; }
+      .controls-panel { justify-content: center; }
+      .info-panel { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <div class="brand-group">
+      <h1 class="brand-title">CyberStrike <span>3D</span></h1>
+      <span class="badge-wasm">WebGL2 + WASM</span>
+    </div>
+    <div class="header-controls">
+      <button class="btn-cyber" id="btnFullscreen" title="Toggle Fullscreen">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+        </svg>
+        Fullscreen
+      </button>
+    </div>
+  </header>
+
+  <!-- Viewport Main Wrapper -->
+  <main class="viewport-wrapper">
+    <div class="viewport-frame" id="viewportFrame">
+      <!-- HTML5 WebGL2 Canvas -->
+      <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+
+      <!-- Loading / Downloading Screen -->
+      <div id="loadingOverlay">
+        <div class="loader-spinner"></div>
+        <div class="loading-title">CYBERSTRIKE 3D</div>
+        <div id="loadingStatus">Initializing WebAssembly Engine...</div>
+        <div class="progress-bar-container">
+          <div id="progressBar"></div>
+        </div>
+      </div>
+
+      <!-- Click to Play Overlay (activates pointer lock) -->
+      <div id="clickToPlayOverlay">
+        <button class="btn-play-pulse" id="btnPlay">CLICK TO DEPLOY</button>
+        <div class="play-hint">Clicks inside arena lock mouse for 360° tactical aim</div>
+      </div>
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="controls-panel">
+      <div class="control-item">
+        <span class="key-badge">W</span><span class="key-badge">A</span><span class="key-badge">S</span><span class="key-badge">D</span>
+        <span>Move</span>
+      </div>
+      <div class="control-item">
+        <span class="key-badge">MOUSE</span>
+        <span>Aim (360° FPS)</span>
+      </div>
+      <div class="control-item">
+        <span class="key-badge">L-CLICK</span>
+        <span>Shoot Raycast</span>
+      </div>
+      <div class="control-item">
+        <span class="key-badge">R</span>
+        <span>Reload / Reset</span>
+      </div>
+      <div class="control-item">
+        <span class="key-badge">P</span>
+        <span>Pause</span>
+      </div>
+      <div class="control-item">
+        <span class="key-badge">ESC</span>
+        <span>Unlock Mouse</span>
+      </div>
+    </div>
+
+    <!-- Computer Graphics Architecture Highlight for Viva -->
+    <div class="info-panel">
+      <div class="info-card">
+        <h4>Blinn-Phong Lighting</h4>
+        <p>Directional solar light + dynamic 3D omni-attenuated point light with specular highlights.</p>
+      </div>
+      <div class="info-card">
+        <h4>Wave AI & Pathfinding</h4>
+        <p>Dynamic drone navigation, player tracking, and AABB wall-slide collision resolution.</p>
+      </div>
+      <div class="info-card">
+        <h4>Raycast Hit Scan</h4>
+        <p>Exact 3D ray-box intersection algorithms for high-speed laser combat and obstacle deflection.</p>
+      </div>
+      <div class="info-card">
+        <h4>Orthographic HUD</h4>
+        <p>Hardware-accelerated 2D projection rendering real-time health, ammo, wave status, and crosshair.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    CyberStrike 3D &bull; Computer Graphics & C++ WebAssembly Project &bull; Powered by Emscripten & WebGL 2.0
+  </footer>
+
+  <!-- Emscripten Module Integration Script -->
+  <script type="text/javascript">
+    const canvas = document.getElementById('canvas');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingStatus = document.getElementById('loadingStatus');
+    const progressBar = document.getElementById('progressBar');
+    const clickOverlay = document.getElementById('clickToPlayOverlay');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnFullscreen = document.getElementById('btnFullscreen');
+    const viewportFrame = document.getElementById('viewportFrame');
+
+    let totalDependencies = 0;
+    let dependenciesLeft = 0;
+
+    var Module = {
+      preRun: [],
+      postRun: [
+        function() {
+          console.log("[WASM] CyberStrike 3D engine initialized successfully!");
+          loadingOverlay.style.opacity = '0';
+          setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+            clickOverlay.style.display = 'flex';
+          }, 400);
+        }
+      ],
+      print: function(text) {
+        console.log('[ENGINE]', text);
+      },
+      printErr: function(text) {
+        console.error('[ENGINE ERROR]', text);
+      },
+      canvas: (function() {
+        // Prevent context menu on right click
+        canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+        return canvas;
+      })(),
+      setStatus: function(text) {
+        if (!text) return;
+        const match = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+        if (match) {
+          const current = parseFloat(match[2]);
+          const total = parseFloat(match[4]);
+          const pct = Math.round((current / total) * 100);
+          progressBar.style.width = pct + '%';
+          loadingStatus.innerText = `Downloading Data (${pct}%)...`;
+        } else {
+          loadingStatus.innerText = text;
+        }
+      },
+      monitorRunDependencies: function(left) {
+        dependenciesLeft = left;
+        totalDependencies = Math.max(totalDependencies, left);
+        if (left === 0) {
+          progressBar.style.width = '100%';
+          loadingStatus.innerText = "Launching Engine...";
+        } else {
+          const pct = Math.round(((totalDependencies - left) / totalDependencies) * 100);
+          progressBar.style.width = pct + '%';
+          loadingStatus.innerText = `Loading Assets (${totalDependencies - left}/${totalDependencies})...`;
+        }
+      }
+    };
+
+    // User Gesture Pointer Lock Trigger
+    function requestCanvasLock() {
+      clickOverlay.style.display = 'none';
+      canvas.focus();
+      try {
+        if (canvas.requestPointerLock) {
+          canvas.requestPointerLock();
+        }
+      } catch (err) {
+        console.warn("Pointer lock request failed:", err);
+      }
+    }
+
+    clickOverlay.addEventListener('click', requestCanvasLock);
+    btnPlay.addEventListener('click', requestCanvasLock);
+
+    canvas.addEventListener('click', function() {
+      if (document.pointerLockElement !== canvas) {
+        try {
+          if (canvas.requestPointerLock) {
+            canvas.requestPointerLock();
+          }
+        } catch (e) {}
+      }
+    });
+
+    // Fullscreen Toggle
+    btnFullscreen.addEventListener('click', function() {
+      if (!document.fullscreenElement) {
+        if (viewportFrame.requestFullscreen) {
+          viewportFrame.requestFullscreen();
+        } else if (viewportFrame.webkitRequestFullscreen) {
+          viewportFrame.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    });
+
+    window.addEventListener('resize', function() {
+      // Maintain proper canvas resolution
+      if (Module.setCanvasSize) {
+        const rect = canvas.getBoundingClientRect();
+        // Module.setCanvasSize(rect.width, rect.height);
+      }
+    });
+  </script>
+
+  <!-- Inject Emscripten Generated JavaScript Glue Code -->
+  {{{ SCRIPT }}}
+</body>
+</html>

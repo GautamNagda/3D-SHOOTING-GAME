@@ -20,12 +20,15 @@ To create a fully functional single-player 3D shooting game in which the player 
 | Component | Library / Specification | Purpose in Project |
 | :--- | :--- | :--- |
 | **Language** | Modern C++ (C++14 / C++17) | Core engine logic, OOP architecture, physics, and state management |
-| **Graphics API** | OpenGL 3.3 (Core Profile) | Programmable GPU rendering pipeline (VAO, VBO, Shaders, Z-Buffer) |
-| **Window & Input** | GLFW 3.3.8 | Cross-platform window creation, mouse locking, and keyboard event polling |
-| **Function Loader** | GLAD | Dynamic runtime loading of GPU driver OpenGL function pointers |
+| **Desktop Graphics** | OpenGL 3.3 (Core Profile) | Programmable GPU rendering pipeline for Windows desktop (VAO, VBO, Z-Buffer) |
+| **Web Graphics** | WebGL 2.0 (GLES 3.0) | Hardware-accelerated 3D browser graphics via `#version 300 es` shaders |
+| **Web Compiler** | Emscripten SDK (em++) | Compiles C++ codebase directly to portable WebAssembly (`.wasm`) |
+| **Window & Input** | GLFW 3.3.8 | Cross-platform desktop and browser window creation & mouse/pointer lock |
+| **Function Loader** | GLAD | Dynamic runtime loading of GPU driver OpenGL function pointers (Desktop) |
 | **Mathematics** | GLM 0.9.9.8 | 3D vectors, affine matrices, camera `lookAt`, and `perspective` projection |
 | **Texture Loading**| stb_image | Image decoding for 2D diffuse texture maps (PNG format) |
-| **Build System** | CMake 4.4 + MinGW GCC | Cross-platform compilation and dependency orchestration |
+| **Build System** | CMake 4.4 + MinGW GCC | Windows native compilation and dependency orchestration |
+| **Web Deployment** | Vercel Serverless Hosting | High-speed global edge distribution for browser gameplay |
 
 ---
 
@@ -190,15 +193,85 @@ Open PowerShell or Command Prompt inside the `CyberStrike3D` folder and execute:
 ```
 This script runs CMake, compiles all C++ sources with MinGW GCC, copies runtime dependencies (`glfw3.dll`), and organizes shaders and textures into `build\`.
 
-### Running the Game Interactively
+### Running the Game Interactively (Windows Desktop)
 ```powershell
 .\build\CyberStrike3D.exe
 ```
 
-### Running the Automated Self-Test
+### Running the Automated Self-Test (Windows Desktop)
 ```powershell
 .\build\CyberStrike3D.exe --test
 ```
+
+---
+
+## 8.1 WebAssembly & WebGL2 Browser Edition (Play Online)
+
+The project includes first-class support for compiling into a browser-playable WebAssembly (WASM) / WebGL2 web application without affecting or altering the native Windows desktop build.
+
+### 1. Prerequisites for Web Build
+* **Emscripten SDK (emsdk)** installed (e.g. `C:\Users\hp\emsdk` or added to system PATH).
+
+### 2. Building for Web (`build_web.bat`)
+To compile the WebAssembly build, execute:
+```bat
+.\build_web.bat
+```
+This invokes `em++` with WebGL2, GLFW3, and asset preloading flags to produce self-contained files in the `web/` directory:
+* `web/index.html` (Cyberpunk-styled interface with loading screen & responsive canvas)
+* `web/index.js` (Emscripten JavaScript runtime glue)
+* `web/index.wasm` (Compiled high-performance C++ WebAssembly binary)
+* `web/index.data` (Virtual file system containing packed textures and shaders)
+
+### 3. Local Web Preview
+Because WebAssembly requires HTTP/HTTPS to load `.wasm` and `.data` files (CORS security), serve the `web/` folder using Python or Node:
+```powershell
+# Using Python
+python -m http.server 8080 --directory web
+
+# Or using Node.js / npx
+npx serve web
+```
+Open **`http://localhost:8080`** in Chrome, Firefox, Edge, or Safari to play!
+
+---
+
+## 8.2 Deployment to Vercel
+
+CyberStrike 3D is configured for immediate deployment to **Vercel** with zero-configuration serverless hosting:
+
+### Method A: Deploy via GitHub (Recommended)
+1. Push this repository to GitHub:
+   ```powershell
+   git add .
+   git commit -m "feat: CyberStrike 3D Desktop and WebAssembly builds"
+   git push origin main
+   ```
+2. Log into [Vercel](https://vercel.com).
+3. Click **"Add New..."** $\rightarrow$ **"Project"**.
+4. Import your **`CyberStrike3D`** repository.
+5. Vercel automatically detects the included `vercel.json` and sets:
+   - **Framework Preset**: *Other*
+   - **Output Directory**: `web`
+6. Click **Deploy**. Within seconds, your 3D shooting game is live with global edge CDN distribution and HTTPS!
+
+### Method B: Deploy via Vercel CLI
+```powershell
+# Install Vercel CLI (if not already installed)
+npm install -g vercel
+
+# Deploy directly to preview
+vercel
+
+# Deploy to production
+vercel --prod
+```
+
+### Vercel Configuration Details (`vercel.json`)
+The included `vercel.json` automatically configures:
+* **Output Directory**: Points directly to `web`
+* **MIME Types**: Ensures `application/wasm` is served for `.wasm` files
+* **Security Headers**: Sets `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` to maximize WebAssembly performance and memory isolation.
 
 ---
 

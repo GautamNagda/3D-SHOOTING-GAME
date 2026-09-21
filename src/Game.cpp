@@ -3,6 +3,14 @@
 #include <fstream>
 #include <cmath>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+static void emscriptenLoop(void* arg) {
+    static_cast<CyberStrike::Game*>(arg)->updateFrame();
+}
+#endif
+
 namespace CyberStrike {
 
 Game::Game(int width, int height, const std::string& title)
@@ -29,6 +37,10 @@ bool Game::init() {
     glDepthFunc(GL_LESS);
 
     // 2. Load Shaders
+#ifdef __EMSCRIPTEN__
+    std::string vPath = "shaders/web/vertex.glsl";
+    std::string fPath = "shaders/web/fragment.glsl";
+#else
     std::string vPath = "shaders/vertex.glsl";
     std::string fPath = "shaders/fragment.glsl";
     std::ifstream f(vPath);
@@ -38,6 +50,7 @@ bool Game::init() {
     } else {
         f.close();
     }
+#endif
 
     if (!m_worldShader.loadFromFiles(vPath, fPath)) {
         return false;
@@ -192,7 +205,8 @@ void Game::handleInput(float deltaTime, float currentTime) {
 
     // Keyboard controls
     if (m_state == GameState::START_MENU) {
-        if (m_window.isKeyPressed(GLFW_KEY_ENTER) || m_window.isKeyPressed(GLFW_KEY_SPACE)) {
+        if (m_window.isKeyPressed(GLFW_KEY_ENTER) || m_window.isKeyPressed(GLFW_KEY_SPACE) ||
+            glfwGetMouseButton(m_window.getNativeWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             m_state = GameState::PLAYING;
             m_window.setCursorLocked(true);
         }
@@ -250,7 +264,9 @@ void Game::handleInput(float deltaTime, float currentTime) {
         }
     }
     else if (m_state == GameState::GAME_OVER || m_state == GameState::VICTORY) {
-        if (m_window.isKeyPressed(GLFW_KEY_R)) {
+        if (m_window.isKeyPressed(GLFW_KEY_R) || m_window.isKeyPressed(GLFW_KEY_ENTER) ||
+            m_window.isKeyPressed(GLFW_KEY_SPACE) ||
+            glfwGetMouseButton(m_window.getNativeWindow(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
             resetGame();
             m_state = GameState::PLAYING;
             m_window.setCursorLocked(true);
@@ -408,23 +424,31 @@ void Game::render2D() {
     m_ui.end();
 }
 
+void Game::updateFrame() {
+    float currentFrame = static_cast<float>(glfwGetTime());
+    float deltaTime = currentFrame - m_lastFrameTime;
+    m_lastFrameTime = currentFrame;
+
+    m_window.pollEvents();
+    handleInput(deltaTime, currentFrame);
+    update(deltaTime, currentFrame);
+
+    render3D(currentFrame);
+    render2D();
+
+    m_window.swapBuffers();
+}
+
 void Game::run() {
     m_lastFrameTime = static_cast<float>(glfwGetTime());
 
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg(emscriptenLoop, this, 0, 1);
+#else
     while (!m_window.shouldClose()) {
-        float currentFrame = static_cast<float>(glfwGetTime());
-        float deltaTime = currentFrame - m_lastFrameTime;
-        m_lastFrameTime = currentFrame;
-
-        m_window.pollEvents();
-        handleInput(deltaTime, currentFrame);
-        update(deltaTime, currentFrame);
-
-        render3D(currentFrame);
-        render2D();
-
-        m_window.swapBuffers();
+        updateFrame();
     }
+#endif
 }
 
 bool Game::runSelfTest() {
